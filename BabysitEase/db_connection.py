@@ -12,21 +12,3 @@ def connect_to_db():
     except mysql.connector.Error as err:
         print(f"Erro ao conectar ao banco de dados: {err}")
         return None
-
-# Função para criar a tabela de usuários
-def create_users_table():
-    conn = connect_to_db()
-    if conn:
-        cursor = conn.cursor()
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS usuarios (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                nome VARCHAR(255),
-                email VARCHAR(255)
-            )
-        """)
-        print("Tabela de usuários criada com sucesso!")
-        cursor.close()
-        conn.close()
-    else:
-        print("Erro ao conectar ao banco de dados")
