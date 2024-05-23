@@ -1,38 +1,52 @@
-# server.py
+from http.server import BaseHTTPRequestHandler, HTTPServer
+from config import DB_CONFIG as DATABASE_CONFIG
+import mysql.connector
+import urllib.parse
+import json
+from db_connection import connect_to_db
 
-import http.server
-import ssl
-from routes import handle_request
-
-class MyHandler(http.server.BaseHTTPRequestHandler):
+class RequestHandler(BaseHTTPRequestHandler):
     def do_GET(self):
-        response = handle_request(self.path)
-        self.send_response(200)
-        self.end_headers()
-        if isinstance(response, tuple) and response[0] == 'redirect':
-            self.send_response(302)
-            self.send_header('Location', response[1])
-            self.end_headers()
+        if self.path == '/home':
+            self.handle_home()
         else:
-            self.wfile.write(response.encode('utf-8'))
-    
-    def do_POST(self):
-        content_length = int(self.headers['Content-Length'])
-        post_data = self.rfile.read(content_length).decode('utf-8')
-        response = handle_request(self.path, post_data)
+            self.send_response(404)
+            self.end_headers()
+            self.wfile.write(b'Not Found')
+
+    def handle_home(self):
+        conn = mysql.connector.connect(**DATABASE_CONFIG)
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute('SELECT b.cpf, a.name, b.description, b.hourly_price FROM babysitter b, account a WHERE b.cpf = a.cpf')
+        babysitters = cursor.fetchall()
+        print(babysitters)
+        conn.close()
+
+        response = [
+            {
+                "id": babysitter["cpf"],
+                "name": babysitter["name"],
+                "description": babysitter["description"],
+                "hourlyPrice": babysitter["hourly_price"],
+                "image": "https://via.placeholder.com/150",
+                "isFavorited": False,
+            }
+            for babysitter in babysitters
+        ]
+
         self.send_response(200)
+        self.send_header('Content-Type', 'application/json')
+        self.send_header('Access-Control-Allow-Origin', '*')  # Allow access from all origins
         self.end_headers()
-        self.wfile.write(response.encode('utf-8'))
+        self.wfile.write(json.dumps(response).encode('utf-8'))
+
+# Função principal para iniciar o servidor
+def run(server_class=HTTPServer, handler_class=RequestHandler, port=8000):
+    connect_to_db()
+    server_address = ('', port)
+    httpd = server_class(server_address, handler_class)
+    print(f'Starting server on port {port}...')
+    httpd.serve_forever()
 
 if __name__ == '__main__':
-    httpd = http.server.HTTPServer(('localhost', 8000), MyHandler)
-    
-    # Criação de contexto SSL
-    context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
-    context.load_cert_chain(certfile="cert.pem", keyfile="key.pem")
-    
-    # Envolva o socket com o contexto SSL
-    httpd.socket = context.wrap_socket(httpd.socket, server_side=True)
-    
-    print("Servidor rodando na porta https://localhost:8000")
-    httpd.serve_forever()
+    run()
