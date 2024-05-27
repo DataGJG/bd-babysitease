@@ -4,6 +4,7 @@ import mysql.connector
 import urllib.parse
 import json
 from db_connection import connect_to_db
+from decimal import Decimal
 
 class RequestHandler(BaseHTTPRequestHandler):
     def do_GET(self):
@@ -15,9 +16,17 @@ class RequestHandler(BaseHTTPRequestHandler):
             self.wfile.write(b'Not Found')
 
     def handle_home(self):
+        params = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
+        if 'range' in params:
+            range_value = float(params['range'][0])
+            min_value, max_value = map(float, range_value.split(','))
         conn = mysql.connector.connect(**DATABASE_CONFIG)
         cursor = conn.cursor(dictionary=True)
-        cursor.execute('SELECT b.cpf, a.name, b.description, b.hourly_price FROM babysitter b, account a WHERE b.cpf = a.cpf')
+             
+        if range_value:
+            cursor.execute('SELECT b.cpf, a.name, b.description, b.hourly_price FROM babysitter b, account a WHERE b.cpf = a.cpf AND b.hourly_price >= %s AND b.hourly_price <= %s', (min_value, max_value))
+        else:
+            cursor.execute('SELECT b.cpf, a.name, b.description, b.hourly_price FROM babysitter b, account a WHERE b.cpf = a.cpf')
         babysitters = cursor.fetchall()
         print(babysitters)
         conn.close()
@@ -27,7 +36,7 @@ class RequestHandler(BaseHTTPRequestHandler):
                 "id": babysitter["cpf"],
                 "name": babysitter["name"],
                 "description": babysitter["description"],
-                "hourlyPrice": babysitter["hourly_price"],
+                "hourlyPrice": float(babysitter["hourly_price"]),
                 "image": "https://via.placeholder.com/150",
                 "isFavorited": False,
             }
