@@ -16,17 +16,10 @@ class RequestHandler(BaseHTTPRequestHandler):
             self.wfile.write(b'Not Found')
 
     def handle_home(self):
-        params = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
-        if 'range' in params:
-            range_value = float(params['range'][0])
-            min_value, max_value = map(float, range_value.split(','))
         conn = mysql.connector.connect(**DATABASE_CONFIG)
-        cursor = conn.cursor(dictionary=True)
-             
-        if range_value:
-            cursor.execute('SELECT b.cpf, a.name, b.description, b.hourly_price FROM babysitter b, account a WHERE b.cpf = a.cpf AND b.hourly_price >= %s AND b.hourly_price <= %s', (min_value, max_value))
-        else:
-            cursor.execute('SELECT b.cpf, a.name, b.description, b.hourly_price FROM babysitter b, account a WHERE b.cpf = a.cpf')
+        cursor = conn.cursor(dictionary=True)    
+        
+        cursor.execute('SELECT b.cpf, a.name, b.description, b.hourly_price FROM babysitter b, account a WHERE b.cpf = a.cpf')
         babysitters = cursor.fetchall()
         print(babysitters)
         conn.close()
