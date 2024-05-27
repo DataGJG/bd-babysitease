@@ -4,7 +4,7 @@
 DB_CONFIG = {
     'host': 'localhost',
     'user': 'root',
-    'password': 'Tabosa02',
+    'password': 'Pedrinho22',
     'database': 'babysitease',
     'auth_plugin':'mysql_native_password'
 }

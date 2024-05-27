@@ -28,7 +28,6 @@ def handle_request(path, body=None):
 def criar_conta_pai(body):
     try:
         data = json.loads(body)
-        print('Dados do pai:', data)
         conn = connect_to_db()
         if conn:
             cursor = conn.cursor()
