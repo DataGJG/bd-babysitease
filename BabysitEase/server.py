@@ -24,8 +24,6 @@ class RequestHandler(BaseHTTPRequestHandler):
         conn = mysql.connector.connect(**DATABASE_CONFIG)
         cursor = conn.cursor(dictionary=True)
 
-        print(query_params)
-
         sql_query = 'SELECT b.cpf, a.name, b.description, b.hourly_price FROM babysitter b, account a WHERE b.cpf = a.cpf'
 
         # Verificar e adicionar apenas um filtro à consulta
@@ -37,14 +35,24 @@ class RequestHandler(BaseHTTPRequestHandler):
             sql_query += f" AND b.rating = {rating}"
         elif 'experience' in query_params:
             experience = int(query_params['experience'][0])
-            sql_query += f" AND b.experience >= {experience}"
+            # Se for 1, realiza consulta para <= 3
+            # se for 2, realiza consulta para > 3 e <= 5
+            # se for 3, realiza consulta para > 5
+    
+            if experience == 1:
+                sql_query += " AND b.experience_years <= 3"
+            elif experience == 2:
+                sql_query += " AND b.experience_years > 3 AND b.experience_years <= 5"
+            elif experience == 3:
+                sql_query += " AND b.experience_years > 5"
         elif 'languages' in query_params:
             languages = query_params['languages']
             languages_str = ','.join([f"'{lang}'" for lang in languages])
-            sql_query += f" AND b.languages IN ({languages_str})"
+            sql_query = f"SELECT b.cpf, a.name, b.description, b.hourly_price FROM babysitter b JOIN account a ON b.cpf = a.cpf JOIN babysitter_languages bl ON b.cpf = bl.babysitter_cpf JOIN languages l ON bl.language_name = l.name WHERE l.name = {languages_str}"
 
         cursor.execute(sql_query)
         babysitters = cursor.fetchall()
+
         conn.close()
 
         response = [
