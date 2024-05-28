@@ -24,6 +24,8 @@ class RequestHandler(BaseHTTPRequestHandler):
         conn = mysql.connector.connect(**DATABASE_CONFIG)
         cursor = conn.cursor(dictionary=True)
 
+        print(query_params)
+
         sql_query = 'SELECT b.cpf, a.name, b.description, b.hourly_price FROM babysitter b, account a WHERE b.cpf = a.cpf'
 
         # Verificar e adicionar apenas um filtro à consulta
@@ -38,7 +40,6 @@ class RequestHandler(BaseHTTPRequestHandler):
             # Se for 1, realiza consulta para <= 3
             # se for 2, realiza consulta para > 3 e <= 5
             # se for 3, realiza consulta para > 5
-    
             if experience == 1:
                 sql_query += " AND b.experience_years <= 3"
             elif experience == 2:
@@ -49,6 +50,17 @@ class RequestHandler(BaseHTTPRequestHandler):
             languages = query_params['languages']
             languages_str = ','.join([f"'{lang}'" for lang in languages])
             sql_query = f"SELECT b.cpf, a.name, b.description, b.hourly_price FROM babysitter b JOIN account a ON b.cpf = a.cpf JOIN babysitter_languages bl ON b.cpf = bl.babysitter_cpf JOIN languages l ON bl.language_name = l.name WHERE l.name = {languages_str}"
+        elif 'mostPopular' in query_params:
+            sql_query = f"SELECT b.cpf, a.name, COUNT(c.id) AS contracts_finished_last_year FROM babysitter b JOIN account a ON b.cpf = a.cpf JOIN request r ON b.cpf = r.babysitter_cpf JOIN contract c ON r.id = c.request_id WHERE c.status LIKE 'finished' AND c.end_date BETWEEN DATE_SUB(NOW(), INTERVAL 1 YEAR) AND NOW() GROUP BY b.cpf, a.name ORDER BY contracts_finished_last_year DESC LIMIT 1;"
+        elif 'betterRated' in query_params:
+            sql_query = f"SELECT b.cpf, a.name, b.description, b.hourly_price FROM babysitter b JOIN account a ON b.cpf = a.cpf WHERE b.cpf IN (SELECT e.babysitter_cpf FROM evaluation e GROUP BY e.babysitter_cpf HAVING COUNT(*) >= 3 ) ORDER BY b.rating desc LIMIT 1;"
+        elif 'gender' in query_params:
+            sql_query = f"SELECT b.cpf, a.name, b.description, b.hourly_price FROM babysitter b JOIN account a ON b.cpf = a.cpf WHERE a.gender like '{query_params['gender'][0]}'"
+        elif 'educationLevel' in query_params:
+            if query_params['educationLevel'][0] == '1':
+                sql_query = f"SELECT b.cpf, a.name, b.description, b.hourly_price FROM babysitter b JOIN account a ON b.cpf = a.cpf WHERE b.education_level = 'High School Diploma'"
+            elif query_params['educationLevel'][0] == '2':
+                sql_query = f"SELECT b.cpf, a.name, b.description, b.hourly_price FROM babysitter b JOIN account a ON b.cpf = a.cpf WHERE b.education_level not like 'High School Diploma'"
 
         cursor.execute(sql_query)
         babysitters = cursor.fetchall()
