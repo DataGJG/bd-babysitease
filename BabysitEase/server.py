@@ -61,7 +61,8 @@ class RequestHandler(BaseHTTPRequestHandler):
                 sql_query = f"SELECT b.cpf, a.name, b.description, b.hourly_price FROM babysitter b JOIN account a ON b.cpf = a.cpf WHERE b.education_level = 'High School Diploma'"
             elif query_params['educationLevel'][0] == '2':
                 sql_query = f"SELECT b.cpf, a.name, b.description, b.hourly_price FROM babysitter b JOIN account a ON b.cpf = a.cpf WHERE b.education_level not like 'High School Diploma'"
-
+        elif 'mostRequested' in query_params:
+            sql_query = f"SELECT b.cpf, a.name, COUNT(r.id) AS count FROM babysitter b JOIN account a ON b.cpf = a.cpf JOIN request r ON b.cpf = r.babysitter_cpf GROUP BY b.cpf, a.name HAVING COUNT(r.id) > (SELECT AVG(request_count) FROM (SELECT COUNT(id) AS request_count FROM request GROUP BY babysitter_cpf) AS subquery);"
         cursor.execute(sql_query)
         babysitters = cursor.fetchall()
 
